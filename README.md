@@ -18,6 +18,34 @@ This project implements Homework 3 for Customer Support Triage.
 
 HTTP POST → Validation → Classification → Routing → Google Sheets
 
+## Antigravity Workflow Structure
+
+The workflow was designed and implemented in Antigravity using prompt-based development.
+
+```text
+Webhook Trigger (/ticket)
+        ↓
+Input Parser
+        ↓
+Validation Step
+- checks missing name
+- checks invalid email
+- checks empty message
+        ↓
+Classification Step
+- category: billing, bug, feature_request, general
+- priority: low, medium, high
+        ↓
+Routing Step
+- billing → finance_email
+- bug → dev_slack
+- general / feature_request → shared_email
+        ↓
+Google Sheets Connector
+- saves original data
+- saves validation status
+- saves category, priority, routed_to
+```
 ---
 
 ## Step-by-Step Development
