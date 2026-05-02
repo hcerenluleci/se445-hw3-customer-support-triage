@@ -99,7 +99,7 @@ The system assigns:
 - medium
 - high
 
-Initially, Gemini AI was used through prompt-based classification. However, due to API model compatibility issues, a rule-based fallback classification was implemented.
+The AI classification was designed using a structured prompt to ensure consistent outputs for category and priority labels. However, due to API model compatibility issues, a rule-based fallback classification was implemented.
 
 ---
 
