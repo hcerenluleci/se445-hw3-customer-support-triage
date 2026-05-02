@@ -6,20 +6,22 @@ import gspread
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# Load env
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# Gemini setup
+# Configure Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Google Sheets setup
+# Connect to Google Sheets
 gc = gspread.service_account(filename=os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"))
 sheet = gc.open(os.getenv("GOOGLE_SHEET_NAME")).sheet1
 
+
 # ---------- VALIDATION ----------
 def validate_input(name, email, message):
+    # Validate required fields and email format
     errors = []
 
     if not name or name.strip() == "":
@@ -37,20 +39,56 @@ def validate_input(name, email, message):
 
 # ---------- AI CLASSIFICATION ----------
 def classify_ticket(message):
-    message_lower = message.lower()
+    # Try AI classification first. If AI fails, use rule-based fallback.
+    try:
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
-    if "charged" in message_lower or "payment" in message_lower:
-        return "billing", "high"
-    elif "error" in message_lower or "bug" in message_lower:
-        return "bug", "high"
-    elif "feature" in message_lower:
-        return "feature_request", "medium"
-    else:
-        return "general", "low"
+        prompt = f"""
+Classify this customer support message.
+
+Message: {message}
+
+Return ONLY in this format:
+category: one of [billing, bug, feature_request, general]
+priority: one of [low, medium, high]
+"""
+
+        response = model.generate_content(prompt)
+        text = response.text.lower()
+
+        category = "general"
+        priority = "low"
+
+        if "billing" in text:
+            category = "billing"
+            priority = "high"
+        elif "bug" in text:
+            category = "bug"
+            priority = "high"
+        elif "feature" in text:
+            category = "feature_request"
+            priority = "medium"
+
+        return category, priority
+
+    except Exception as e:
+        print("AI failed, using fallback:", e)
+
+        message_lower = message.lower()
+
+        if "charged" in message_lower or "payment" in message_lower:
+            return "billing", "high"
+        elif "error" in message_lower or "bug" in message_lower:
+            return "bug", "high"
+        elif "feature" in message_lower:
+            return "feature_request", "medium"
+        else:
+            return "general", "low"
 
 
 # ---------- ROUTING ----------
 def route_ticket(category):
+    # Route ticket based on its category
     if category == "billing":
         return "finance_email"
     elif category == "bug":
@@ -61,30 +99,28 @@ def route_ticket(category):
 
 # ---------- SAVE ----------
 def save_to_sheets(data):
+    # Save ticket record to Google Sheets
     sheet.append_row(data)
 
 
 # ---------- ENDPOINT ----------
 @app.route("/ticket", methods=["POST"])
 def receive_ticket():
-    data = request.get_json()
+    data = request.get_json() or {}
 
     name = data.get("name")
     email = data.get("email")
     message = data.get("message")
 
-    # Validation
     validation_status, validation_errors = validate_input(name, email, message)
 
-    # AI only if valid
     if validation_status == "Valid":
         category, priority = classify_ticket(message)
+        routed_to = route_ticket(category)
     else:
         category, priority = "none", "none"
+        routed_to = "none"
 
-    routed_to = route_ticket(category) if validation_status == "Valid" else "none"
-
-    # Save everything
     record = [
         datetime.now().isoformat(),
         name,
