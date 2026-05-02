@@ -15,7 +15,6 @@ ENV/
 
 # Credentials / secrets
 service_account.json
-*.json
 
 # Flask
 instance/
