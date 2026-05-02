@@ -341,7 +341,7 @@ The system design, validation logic, classification structure, routing rules, an
 
 ## Notes
 
-- AI classification was replaced with rule-based fallback classification due to API compatibility issues.
+- AI classification is supported with a fallback rule-based mechanism to ensure continuous system operation. classification due to API compatibility issues.
 - The system still meets the HW3 requirement by assigning category and priority values.
 - The main focus is validation, classification, routing, and persistent storage.
 - Sensitive files such as `.env` and `service_account.json` should not be uploaded to GitHub.
