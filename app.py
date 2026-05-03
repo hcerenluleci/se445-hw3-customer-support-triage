@@ -5,6 +5,9 @@ from flask import Flask, request, jsonify
 import gspread
 from dotenv import load_dotenv
 import google.generativeai as genai
+import requests
+import smtplib
+from email.mime.text import MIMEText
 
 # Load environment variables from .env file
 load_dotenv()
@@ -97,6 +100,46 @@ def route_ticket(category):
         return "shared_email"
 
 
+# ---------- REAL ROUTING INTEGRATIONS ----------
+def send_email(to_email, subject, body):
+    try:
+        smtp_server = os.getenv("SMTP_SERVER")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_username = os.getenv("SMTP_USERNAME")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        from_email = os.getenv("FROM_EMAIL")
+
+        if not all([smtp_server, smtp_username, smtp_password, from_email, to_email]):
+            print("Missing SMTP configuration or destination email.")
+            return False
+
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = from_email
+        msg['To'] = to_email
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {e}")
+        return False
+
+def send_slack(webhook_url, message):
+    try:
+        if not webhook_url:
+            print("Missing Slack webhook URL.")
+            return False
+        response = requests.post(webhook_url, json={"text": message})
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"Failed to send Slack message: {e}")
+        return False
+
+
 # ---------- SAVE ----------
 def save_to_sheets(data):
     # Save ticket record to Google Sheets
@@ -117,9 +160,28 @@ def receive_ticket():
     if validation_status == "Valid":
         category, priority = classify_ticket(message)
         routed_to = route_ticket(category)
+        
+        delivery_success = False
+        if category == "billing":
+            finance_email = os.getenv("FINANCE_EMAIL")
+            subject = f"New Billing Ticket - {priority.upper()} Priority"
+            body = f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}"
+            delivery_success = send_email(finance_email, subject, body)
+        elif category == "bug":
+            slack_webhook = os.getenv("SLACK_WEBHOOK_BUG")
+            slack_message = f"*New Bug Ticket ({priority.upper()} Priority)*\n*From:* {name} ({email})\n*Message:* {message}"
+            delivery_success = send_slack(slack_webhook, slack_message)
+        elif category in ["general", "feature_request"]:
+            shared_email = os.getenv("SHARED_INBOX_EMAIL")
+            subject = f"New {category.replace('_', ' ').title()} Ticket - {priority.upper()} Priority"
+            body = f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}"
+            delivery_success = send_email(shared_email, subject, body)
+
+        delivery_status = "success" if delivery_success else "failed"
     else:
         category, priority = "none", "none"
         routed_to = "none"
+        delivery_status = "none"
 
     record = [
         datetime.now().isoformat(),
@@ -131,7 +193,7 @@ def receive_ticket():
         category,
         priority,
         routed_to,
-        "received"
+        delivery_status
     ]
 
     save_to_sheets(record)
@@ -141,7 +203,8 @@ def receive_ticket():
         "validation": validation_status,
         "category": category,
         "priority": priority,
-        "routed_to": routed_to
+        "routed_to": routed_to,
+        "delivery_status": delivery_status
     })
 
 
