@@ -22,28 +22,32 @@ HTTP POST → Validation → Classification → Routing → Google Sheets
 
 ## Antigravity Workflow Structure
 
-The workflow was designed using prompt-based development in Antigravity.
+The workflow was designed and implemented in Antigravity using prompt-based development.
 
+```text
 Webhook Trigger (/ticket)
-↓
+        ↓
 Input Parser
-↓
+        ↓
 Validation Step
 - checks missing name
 - checks invalid email
 - checks empty message
-↓
+        ↓
 Classification Step
 - category: billing, bug, feature_request, general
 - priority: low, medium, high
-↓
+        ↓
 Routing Step
 - billing → finance_email
 - bug → dev_slack
 - general / feature_request → shared_email
-↓
+        ↓
 Google Sheets Connector
-- saves all request data and metadata
+- saves original data
+- saves validation status
+- saves category, priority, routed_to
+```
 
 ---
 
@@ -51,9 +55,14 @@ Google Sheets Connector
 
 ### STEP 1 — Webhook Setup
 
-POST /ticket
+Using Antigravity, I generated a Flask application with a POST endpoint:
 
-Accepts JSON input:
+```text
+POST /ticket
+```
+
+This endpoint receives JSON input with:
+
 - name
 - email
 - message
@@ -63,47 +72,55 @@ Accepts JSON input:
 ### STEP 2 — Validation
 
 The system checks:
+
 - Missing fields
 - Invalid email format
 
-Invalid requests:
-- Are not deleted
-- Are stored in Google Sheets
-- Are marked as "Invalid"
-- Include validation errors
+If input is invalid:
+
+- It is not deleted
+- It is stored in Google Sheets
+- It is marked as Invalid
+- Errors are logged
 
 ---
 
 ### STEP 3 — Classification
 
-Categories:
+The system assigns:
+
+Category:
 - billing
 - bug
 - feature_request
 - general
 
-Priorities:
+Priority:
 - low
 - medium
 - high
 
-AI classification is performed using the Gemini API.
+The AI classification was designed using a structured prompt to ensure consistent outputs for category and priority labels.
 
-If AI fails (e.g., API limitations), a rule-based fallback classifier is used.
+The system attempts AI-based classification using the Gemini API.
+If the AI service fails (e.g., API limitations), a fallback rule-based classifier ensures continuous operation.
 
 ---
 
 ### STEP 4 — Routing
 
+Tickets are routed as follows:
+
 - billing → finance_email
 - bug → dev_slack
-- feature_request / general → shared_email
+- general / feature_request → shared_email
 
 ---
 
 ### STEP 5 — Data Storage
 
 Stored fields:
+
 - timestamp
 - name
 - email
@@ -120,40 +137,35 @@ Stored fields:
 ## Antigravity Prompts Used
 
 Prompt 1:
-Create a Flask-based customer support triage application.
-Add a POST endpoint at /ticket.
-Accept JSON input: name, email, message.
-Return structured JSON response.
+Create a Flask-based customer support triage application for SE445 HW3.
+The app should have a POST endpoint at /ticket.
+It should accept JSON input with exactly three fields: name, email, and message.
 
 Prompt 2:
-Add validation logic.
-Check missing fields and email format.
-Invalid inputs should not be deleted.
-Store them with validation_status and validation_errors.
+Add validation logic. Check missing fields and validate email format.
+Invalid requests should not be deleted but stored with validation errors.
 
 Prompt 3:
-Classify messages into billing, bug, feature_request, general.
-Assign priority: low, medium, high.
-Return category and priority.
+Classify tickets into billing, bug, feature_request, general.
+Assign priority as low, medium, or high.
 
 Prompt 4:
-Route tickets based on category:
-billing → finance_email
-bug → dev_slack
-others → shared_email
+Add routing logic:
+Billing → finance_email
+Bug → dev_slack
+Others → shared_email
 
 Prompt 5:
 Store all requests in Google Sheets with full metadata.
 
 Prompt 6:
-If AI fails, use rule-based classification.
-Ensure system continues to function.
+Handle AI failures by adding fallback classification logic.
 
 ---
 
 ## Project Files
 
-- app.py → Main application
+- app.py → Main Flask application
 - requirements.txt → Dependencies
 - .env.example → Environment variables
 - README.md → Documentation
@@ -176,7 +188,7 @@ timestamp | name | email | message | validation_status | validation_errors | cat
 - Enable Google Drive API
 - Create Service Account
 - Download JSON
-- Rename to service_account.json
+- Rename to: service_account.json
 - Place in project folder
 - Share sheet with service account email
 
@@ -190,9 +202,9 @@ pip install -r requirements.txt
 
 4) Create .env file
 
-GOOGLE_SHEET_NAME=support_tickets
-GOOGLE_SERVICE_ACCOUNT_FILE=service_account.json
-GEMINI_API_KEY=your_api_key_here
+GOOGLE_SHEET_NAME=support_tickets  
+GOOGLE_SERVICE_ACCOUNT_FILE=service_account.json  
+GEMINI_API_KEY=your_gemini_api_key_here  
 
 ---
 
@@ -205,28 +217,31 @@ python app.py
 ## Test
 
 Valid request:
-Invoke-RestMethod -Uri "http://127.0.0.1:5000/ticket" -Method POST -Headers @{ "Content-Type"="application/json" } -Body '{"name":"Ceren","email":"ceren@gmail.com","message":"I was charged twice"}'
+
+Invoke-RestMethod -Uri "http://127.0.0.1:5000/ticket" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{"name":"Ceren","email":"ceren@gmail.com","message":"I was charged twice"}'
 
 Invalid request:
-Invoke-RestMethod -Uri "http://127.0.0.1:5000/ticket" -Method POST -Headers @{ "Content-Type"="application/json" } -Body '{"name":"","email":"cerenmail.com","message":""}'
+
+Invoke-RestMethod -Uri "http://127.0.0.1:5000/ticket" -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{"name":"","email":"cerenmail.com","message":""}'
 
 ---
 
 ## Notes
 
-- AI classification is supported with fallback logic
-- System works even if AI fails
-- Sensitive files are not included
+- AI classification is supported with a fallback rule-based mechanism to ensure continuous system operation due to API limitations.
+- The system remains fully functional even if AI fails.
+- Sensitive files (.env, service_account.json) are not included in the repository.
 
 ---
 
 ## Conclusion
 
-This system implements:
+This system successfully implements:
+
 - Validation
 - Classification
 - Routing
 - Google Sheets storage
-- Handling of valid and invalid data
+- Handling of both valid and invalid requests
 
 It fulfills HW3 requirements.
