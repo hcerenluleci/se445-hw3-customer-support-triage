@@ -10,6 +10,7 @@ This project implements Homework 3 for Customer Support Triage.
 - Validates input data (name, email, message)
 - Classifies tickets into category and priority
 - Routes tickets based on classification
+- Delivers tickets via Slack or Email based on routing rules
 - Stores all requests (valid and invalid) in Google Sheets
 
 ---
@@ -47,6 +48,7 @@ Google Sheets Connector
 - saves original data
 - saves validation status
 - saves category, priority, routed_to
+- saves delivery_status
 ```
 
 ---
@@ -162,7 +164,7 @@ Bug tickets → dev_slack (via Slack webhook)
 General and feature_request → shared_email (via email)
 
 Prompt 5:
-Store all requests in Google Sheets with full metadata.
+Store all requests in Google Sheets with full metadata including validation_status, category, priority, routed_to, and delivery_status.
 
 Prompt 6:
 Handle AI failures by adding fallback classification logic.
@@ -207,6 +209,8 @@ pip install -r requirements.txt
 ---
 
 4) Create .env file
+
+GEMINI_API_KEY=your_gemini_api_key
 
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
