@@ -210,17 +210,17 @@ pip install -r requirements.txt
 
 4) Create .env file
 
-GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_gemini_api_key  
 
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your_email
-SMTP_PASSWORD=your_app_password
-FROM_EMAIL=your_email
+SMTP_SERVER=smtp.gmail.com  
+SMTP_PORT=587  
+SMTP_USERNAME=your_email  
+SMTP_PASSWORD=your_app_password  
+FROM_EMAIL=your_email  
 
-FINANCE_EMAIL=finance_email_address
-SHARED_INBOX_EMAIL=shared_email_address
-SLACK_WEBHOOK_BUG=your_slack_webhook_url
+FINANCE_EMAIL=finance_email_address  
+SHARED_INBOX_EMAIL=shared_email_address  
+SLACK_WEBHOOK_BUG=your_slack_webhook_url  
 
 ---
 
