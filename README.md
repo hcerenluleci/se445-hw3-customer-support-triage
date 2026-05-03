@@ -16,7 +16,7 @@ This project implements Homework 3 for Customer Support Triage.
 
 ## Required HW3 flow
 
-HTTP POST → Validation → Classification → Routing → Google Sheets
+HTTP POST → Validation → AI Classification → Routing → Delivery (Slack/Email) → Google Sheets
 
 ---
 
@@ -115,6 +115,11 @@ Tickets are routed as follows:
 - bug → dev_slack
 - general / feature_request → shared_email
 
+In the final implementation:
+- Bug tickets are sent to Slack using a webhook
+- Billing tickets are sent via email (SMTP)
+- General and feature requests are sent to a shared inbox email
+
 ---
 
 ### STEP 5 — Data Storage
@@ -130,7 +135,7 @@ Stored fields:
 - category
 - priority
 - routed_to
-- status
+- delivery_status
 
 ---
 
@@ -146,14 +151,15 @@ Add validation logic. Check missing fields and validate email format.
 Invalid requests should not be deleted but stored with validation errors.
 
 Prompt 3:
-Classify tickets into billing, bug, feature_request, general.
-Assign priority as low, medium, or high.
+Classify customer support messages into one of the following categories: billing, bug, feature_request, general.
+Also assign a priority level: low, medium, high.
+Return both category and priority in a structured format.
 
 Prompt 4:
-Add routing logic:
-Billing → finance_email
-Bug → dev_slack
-Others → shared_email
+Add routing logic based on classification results.
+Billing tickets → finance_email (via SMTP email)
+Bug tickets → dev_slack (via Slack webhook)
+General and feature_request → shared_email (via email)
 
 Prompt 5:
 Store all requests in Google Sheets with full metadata.
@@ -178,7 +184,7 @@ Handle AI failures by adding fallback classification logic.
 support_tickets
 
 Columns:
-timestamp | name | email | message | validation_status | validation_errors | category | priority | routed_to | status
+timestamp | name | email | message | validation_status | validation_errors | category | priority | routed_to | delivery_status
 
 ---
 
@@ -202,9 +208,15 @@ pip install -r requirements.txt
 
 4) Create .env file
 
-GOOGLE_SHEET_NAME=support_tickets  
-GOOGLE_SERVICE_ACCOUNT_FILE=service_account.json  
-GEMINI_API_KEY=your_gemini_api_key_here  
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email
+SMTP_PASSWORD=your_app_password
+FROM_EMAIL=your_email
+
+FINANCE_EMAIL=finance_email_address
+SHARED_INBOX_EMAIL=shared_email_address
+SLACK_WEBHOOK_BUG=your_slack_webhook_url
 
 ---
 
